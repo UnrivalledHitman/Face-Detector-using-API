@@ -8,10 +8,10 @@ const Rank = () => {
         <span className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-yellow-400" />
 
         <div className="flex flex-col items-start border-r border-yellow-400/20 pr-6">
-          <p className="text-zinc-400 text-[10px] md:text-xs uppercase tracking-[0.2em]">
+          <p className="text-white text-[10px] md:text-xs uppercase tracking-[0.2em]">
             Indrajeet, your rank is
           </p>
-          <p className="text-zinc-500 text-[9px] md:text-[10px] tracking-widest uppercase mt-0.5">
+          <p className="text-white text-[9px] md:text-[10px] tracking-widest uppercase mt-0.5">
             Leaderboard Champion
           </p>
         </div>
