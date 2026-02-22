@@ -1,4 +1,4 @@
-const ImageLinkForm = ({ onInputChange, onButtonSubmit }) => {
+const ImageLinkForm = ({ onInputChange, onButtonSubmit, isLoading }) => {
   return (
     <div className="w-full flex flex-col items-center px-4 md:px-0">
       <p className="text-black text-xl md:text-2xl mb-8 text-center drop-shadow-lg font-bold">
@@ -21,12 +21,14 @@ const ImageLinkForm = ({ onInputChange, onButtonSubmit }) => {
 
         <button
           className="w-full sm:w-32 py-4 bg-orange-600 hover:bg-orange-500 
+                     disabled:bg-orange-900 disabled:cursor-not-allowed
                      text-white font-bold rounded-xl shadow-lg 
                      transform active:scale-95 transition-all cursor-pointer 
                      shrink-0"
           onClick={onButtonSubmit}
+          disabled={isLoading}
         >
-          Detect
+          {isLoading ? "..." : "Detect"}
         </button>
       </div>
     </div>
