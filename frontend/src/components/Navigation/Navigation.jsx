@@ -3,21 +3,14 @@ import SignIn from "../SignIn/SignIn";
 import SignOut from "../SignOut/SignOut";
 import Register from "../Register/Register";
 
-// Hardcoded user — swap with backend call later
-const HARDCODED_USER = {
-  email: "abcd1234@gmail.com",
-  password: "abcd@1234",
-  name: "abcd1234",
-};
-
-const Navigation = () => {
+const Navigation = ({ onUserChange }) => {
   const [modal, setModal] = useState(null);
   const [user, setUser] = useState(null);
   const [authError, setAuthError] = useState("");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileRef = useRef(null);
 
-  // Close profile menu on outside click
+  // Close profile dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
@@ -28,34 +21,57 @@ const Navigation = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSignIn = ({ email, password }) => {
-    if (
-      email === HARDCODED_USER.email &&
-      password === HARDCODED_USER.password
-    ) {
-      setUser({ email: HARDCODED_USER.email, name: HARDCODED_USER.name });
+  const handleSignIn = async ({ email, password }) => {
+    try {
+      const response = await fetch("http://localhost:3000/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        setAuthError(typeof err === "string" ? err : "Invalid credentials.");
+        return;
+      }
+
+      const loggedInUser = await response.json();
+      setUser(loggedInUser);
+      onUserChange(loggedInUser); // Notify App.jsx
       setAuthError("");
       setModal(null);
-    } else {
-      setAuthError("Invalid email or password.");
+    } catch {
+      setAuthError("Could not reach the server. Is it running?");
     }
   };
 
-  const handleRegister = ({ email, password }) => {
-    if (
-      email === HARDCODED_USER.email &&
-      password === HARDCODED_USER.password
-    ) {
-      setUser({ email: HARDCODED_USER.email, name: HARDCODED_USER.name });
+  const handleRegister = async ({ email, name, password }) => {
+    try {
+      const response = await fetch("http://localhost:3000/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name, password }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        setAuthError(typeof err === "string" ? err : "Registration failed.");
+        return;
+      }
+
+      const newUser = await response.json();
+      setUser(newUser);
+      onUserChange(newUser); // Notify App.jsx
       setAuthError("");
       setModal(null);
-    } else {
-      setAuthError("Registration is not available yet. Use the test account.");
+    } catch {
+      setAuthError("Could not reach the server. Is it running?");
     }
   };
 
   const handleSignOut = () => {
     setUser(null);
+    onUserChange(null); // Notify App.jsx
     setModal(null);
     setShowProfileMenu(false);
   };
@@ -65,7 +81,6 @@ const Navigation = () => {
     setAuthError("");
   };
 
-  // Get initials for avatar
   const getInitials = (name) =>
     name
       .split(" ")
@@ -78,7 +93,6 @@ const Navigation = () => {
     <>
       <nav className="flex justify-end items-center gap-3">
         {user ? (
-          /* ── Signed in: show profile avatar ── */
           <div className="relative" ref={profileRef}>
             <button
               onClick={() => setShowProfileMenu((prev) => !prev)}
@@ -88,14 +102,11 @@ const Navigation = () => {
                          transition-all active:scale-95 shadow-[0_0_15px_rgba(250,204,21,0.2)]"
             >
               {getInitials(user.name)}
-              {/* Online dot */}
               <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-green-400 border-2 border-zinc-950 rounded-full" />
             </button>
 
-            {/* Dropdown */}
             {showProfileMenu && (
               <div className="absolute right-0 mt-3 w-52 bg-zinc-900/98 border border-yellow-400/30 shadow-[0_0_30px_rgba(250,204,21,0.1)] font-mono">
-                {/* Corner accents */}
                 <span className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-yellow-400" />
                 <span className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-yellow-400" />
 
@@ -122,7 +133,6 @@ const Navigation = () => {
             )}
           </div>
         ) : (
-          /* ── Signed out: show Log In only ── */
           <button
             onClick={() => setModal("signin")}
             className="relative group px-6 py-2.5 font-mono text-sm uppercase tracking-widest 

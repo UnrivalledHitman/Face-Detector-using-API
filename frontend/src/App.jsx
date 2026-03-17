@@ -22,8 +22,39 @@ class App extends Component {
       boxes: [],
       isLoading: false,
       error: "",
+      user: null,
+      rank: null,
+      totalUsers: null,
     };
   }
+
+  // Fetch rank from backend for the current user
+  fetchRank = () => {
+    const { user } = this.state;
+    if (!user) return;
+
+    fetch(`http://localhost:3000/rank/${user.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        this.setState({ rank: data.rank, totalUsers: data.total });
+      })
+      .catch((err) => console.error("Failed to fetch rank:", err));
+  };
+
+  // Called by Navigation when user logs in or out
+  onUserChange = (user) => {
+    this.setState({ user, rank: null, totalUsers: null }, () => {
+      if (user) this.fetchRank(); // Fetch rank immediately after login
+    });
+  };
+
+  // Update entries count in state after a successful detection
+  onEntryUpdate = (updatedEntries) => {
+    this.setState(
+      (prev) => ({ user: { ...prev.user, entries: updatedEntries } }),
+      () => this.fetchRank(), // Refresh rank after entries update
+    );
+  };
 
   onInputChange = (event) => {
     this.setState({ input: event.target.value });
@@ -40,6 +71,25 @@ class App extends Component {
         rightCol: (1 - right_col) * 100,
       };
     });
+  };
+
+  // Call /image to increment user's entry count
+  incrementEntries = () => {
+    const { user } = this.state;
+    if (!user) return;
+
+    fetch("http://localhost:3000/image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: user.id }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.entries !== undefined) {
+          this.onEntryUpdate(data.entries);
+        }
+      })
+      .catch((err) => console.error("Failed to update entries:", err));
   };
 
   onButtonSubmit = () => {
@@ -71,6 +121,7 @@ class App extends Component {
         if (result.outputs && result.outputs[0].data.regions) {
           const boxes = this.calculateFaceBoxes(result.outputs[0].data.regions);
           this.setState({ boxes, isLoading: false });
+          this.incrementEntries();
         } else {
           this.setState({ isLoading: false, error: "No faces detected." });
         }
@@ -84,22 +135,20 @@ class App extends Component {
   };
 
   render() {
-    const { imageUrl, boxes, isLoading, error } = this.state;
+    const { imageUrl, boxes, isLoading, error, user, rank, totalUsers } =
+      this.state;
 
     return (
       <div className="relative min-h-dvh bg-linear-to-r from-[#70b2ff] to-[#f571cd] flex flex-col overflow-hidden">
-        {/* Particle Layer */}
         <ParticlesBg />
 
-        {/* Header */}
         <header className="relative w-full flex justify-between items-start p-4 md:p-10">
           <Logo />
-          <Navigation />
+          <Navigation onUserChange={this.onUserChange} />
         </header>
 
-        {/* Main content */}
         <main className="relative grow flex flex-col items-center justify-start w-full px-6 pt-4 md:pt-8 gap-10 md:gap-14">
-          <Rank />
+          <Rank user={user} rank={rank} totalUsers={totalUsers} />
 
           <div className="w-full max-w-2xl">
             <ImageLinkForm
@@ -109,14 +158,12 @@ class App extends Component {
             />
           </div>
 
-          {/* Status messages */}
           {error && (
             <p className="font-mono text-xs uppercase tracking-widest text-red-400 border border-red-400/30 px-4 py-2 bg-zinc-900/80">
               ⚠ {error}
             </p>
           )}
 
-          {/* Face Recognition Output */}
           <div className="w-full flex justify-center pb-16">
             {imageUrl && (
               <FaceRecognition

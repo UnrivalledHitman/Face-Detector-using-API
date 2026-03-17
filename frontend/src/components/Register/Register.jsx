@@ -1,13 +1,14 @@
 import { useState } from "react";
 
 const Register = ({ onRegister, onClose, onGoSignIn, error }) => {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [localError, setLocalError] = useState("");
 
   const handleSubmit = () => {
-    if (!email || !password || !confirm) {
+    if (!name || !email || !password || !confirm) {
       setLocalError("All fields are required.");
       return;
     }
@@ -16,7 +17,7 @@ const Register = ({ onRegister, onClose, onGoSignIn, error }) => {
       return;
     }
     setLocalError("");
-    onRegister({ email, password });
+    onRegister({ name, email, password });
   };
 
   const displayError = localError || error;
@@ -59,6 +60,23 @@ const Register = ({ onRegister, onClose, onGoSignIn, error }) => {
           </p>
         )}
 
+        {/* Name */}
+        <div className="mb-4">
+          <label className="block text-yellow-400 text-[10px] uppercase tracking-[0.2em] mb-2">
+            Name
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Your name"
+            className="w-full bg-zinc-800 text-gray-200 text-sm p-3 border border-zinc-700 
+                       focus:border-yellow-400/60 focus:outline-none transition-colors 
+                       placeholder:text-zinc-600"
+          />
+        </div>
+
+        {/* Email */}
         <div className="mb-4">
           <label className="block text-yellow-400 text-[10px] uppercase tracking-[0.2em] mb-2">
             Email
@@ -74,6 +92,7 @@ const Register = ({ onRegister, onClose, onGoSignIn, error }) => {
           />
         </div>
 
+        {/* Password */}
         <div className="mb-4">
           <label className="block text-yellow-400 text-[10px] uppercase tracking-[0.2em] mb-2">
             Password
@@ -89,6 +108,7 @@ const Register = ({ onRegister, onClose, onGoSignIn, error }) => {
           />
         </div>
 
+        {/* Confirm Password */}
         <div className="mb-8">
           <label className="block text-yellow-400 text-[10px] uppercase tracking-[0.2em] mb-2">
             Confirm Password
