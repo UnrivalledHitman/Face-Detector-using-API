@@ -73,9 +73,28 @@ app.get("/profile/:id", (req, res) => {
 // POST /register — creates a new user account
 app.post("/register", async (req, res) => {
   const { email, name, password } = req.body;
+
+  // Check all fields are present
   if (!email || !name || !password) {
     return res.status(400).json("Email, name, and password are required");
   }
+
+  // Check for duplicate email — case-insensitive
+  const emailExists = database.users.some(
+    (u) => u.email.toLowerCase() === email.toLowerCase(),
+  );
+  if (emailExists) {
+    return res.status(409).json("An account with this email already exists");
+  }
+
+  // Check for duplicate name — case-insensitive
+  const nameExists = database.users.some(
+    (u) => u.name.toLowerCase() === name.toLowerCase(),
+  );
+  if (nameExists) {
+    return res.status(409).json("This username is already taken");
+  }
+
   try {
     const hash = await argon2.hash(password, {
       type: argon2.argon2id,
