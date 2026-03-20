@@ -3,14 +3,15 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const argon2 = require("argon2");
 const knex = require("knex");
+require("dotenv").config();
 
 const db = knex({
   client: "pg",
   connection: {
-    host: "localhost",
-    user: "postgres",
-    password: "In@23112",
-    database: "face_detector",
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
   },
 });
 
@@ -158,6 +159,6 @@ app.get("/rank/:id", async (req, res) => {
   }
 });
 
-app.listen(3000, () => {
-  console.log("Backend server running on 3000.");
+app.listen(process.env.PORT || 3000, () => {
+  console.log(`Backend server running on ${process.env.PORT || 3000}.`);
 });
