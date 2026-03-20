@@ -43,9 +43,21 @@ class App extends Component {
 
   // Called by Navigation when user logs in or out
   onUserChange = (user) => {
-    this.setState({ user, rank: null, totalUsers: null }, () => {
-      if (user) this.fetchRank(); // Fetch rank immediately after login
-    });
+    this.setState(
+      {
+        user,
+        rank: null,
+        totalUsers: null,
+        // Clear these on logout
+        imageUrl: "",
+        boxes: [],
+        error: "",
+        input: "",
+      },
+      () => {
+        if (user) this.fetchRank();
+      },
+    );
   };
 
   // Update entries count in state after a successful detection
