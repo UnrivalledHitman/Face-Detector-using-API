@@ -7,11 +7,11 @@ import Rank from "./components/Rank/Rank";
 import ParticlesBg from "./components/ParticlesBG/ParticlesBg";
 import FaceRecognition from "./components/FaceRecognition/FaceRecognition";
 
-const PAT = "dd7f7116b8684b2c9a82c19cdb29ae9e";
-const USER_ID = "clarifai";
-const APP_ID = "main";
-const MODEL_ID = "face-detection";
-const MODEL_VERSION_ID = "45fb9a671625463fa646c3523a3087d5";
+const PAT = import.meta.env.VITE_CLARIFAI_PAT;
+const USER_ID = import.meta.env.VITE_CLARIFAI_USER_ID;
+const APP_ID = import.meta.env.VITE_CLARIFAI_APP_ID;
+const MODEL_ID = import.meta.env.VITE_CLARIFAI_MODEL_ID;
+const MODEL_VERSION_ID = import.meta.env.VITE_CLARIFAI_MODEL_VERSION_ID;
 
 class App extends Component {
   constructor() {
