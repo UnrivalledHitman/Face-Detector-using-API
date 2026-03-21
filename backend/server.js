@@ -7,7 +7,7 @@ const bodyParser = require("body-parser");
 const signinRouter = require("./routes/signin");
 const registerRouter = require("./routes/register");
 const profileRouter = require("./routes/profile");
-const imageRouter = require("./routes/image");
+const imageurlRouter = require("./routes/imageurl");
 const rankRouter = require("./routes/rank");
 
 const app = express();
@@ -18,7 +18,7 @@ app.use(bodyParser.json());
 app.use("/signin", signinRouter);
 app.use("/register", registerRouter);
 app.use("/profile", profileRouter);
-app.use("/image", imageRouter);
+app.use("/imageurl", imageurlRouter);
 app.use("/rank", rankRouter);
 
 app.listen(process.env.PORT || 3000, () => {

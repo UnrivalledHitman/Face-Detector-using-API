@@ -11,13 +11,4 @@ export default defineConfig({
     }),
     tailwindcss(),
   ],
-  server: {
-    proxy: {
-      "/clarifai-api": {
-        target: "https://api.clarifai.com",
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/clarifai-api/, ""),
-      },
-    },
-  },
 });

@@ -7,11 +7,7 @@ import Rank from "./components/Rank/Rank";
 import ParticlesBg from "./components/ParticlesBG/ParticlesBg";
 import FaceRecognition from "./components/FaceRecognition/FaceRecognition";
 
-const PAT = import.meta.env.VITE_CLARIFAI_PAT;
-const USER_ID = import.meta.env.VITE_CLARIFAI_USER_ID;
-const APP_ID = import.meta.env.VITE_CLARIFAI_APP_ID;
-const MODEL_ID = import.meta.env.VITE_CLARIFAI_MODEL_ID;
-const MODEL_VERSION_ID = import.meta.env.VITE_CLARIFAI_MODEL_VERSION_ID;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
 class App extends Component {
   constructor() {
@@ -28,12 +24,11 @@ class App extends Component {
     };
   }
 
-  // Fetch rank from backend for the current user
   fetchRank = () => {
     const { user } = this.state;
     if (!user) return;
 
-    fetch(`http://localhost:3000/rank/${user.id}`)
+    fetch(`${BACKEND_URL}/rank/${user.id}`)
       .then((res) => res.json())
       .then((data) => {
         this.setState({ rank: data.rank, totalUsers: data.total });
@@ -41,14 +36,12 @@ class App extends Component {
       .catch((err) => console.error("Failed to fetch rank:", err));
   };
 
-  // Called by Navigation when user logs in or out
   onUserChange = (user) => {
     this.setState(
       {
         user,
         rank: null,
         totalUsers: null,
-        // Clear these on logout
         imageUrl: "",
         boxes: [],
         error: "",
@@ -60,11 +53,10 @@ class App extends Component {
     );
   };
 
-  // Update entries count in state after a successful detection
   onEntryUpdate = (updatedEntries) => {
     this.setState(
       (prev) => ({ user: { ...prev.user, entries: updatedEntries } }),
-      () => this.fetchRank(), // Refresh rank after entries update
+      () => this.fetchRank(),
     );
   };
 
@@ -72,76 +64,37 @@ class App extends Component {
     this.setState({ input: event.target.value });
   };
 
-  calculateFaceBoxes = (regions) => {
-    return regions.map((region) => {
-      const { top_row, left_col, bottom_row, right_col } =
-        region.region_info.bounding_box;
-      return {
-        topRow: top_row * 100,
-        leftCol: left_col * 100,
-        bottomRow: (1 - bottom_row) * 100,
-        rightCol: (1 - right_col) * 100,
-      };
-    });
-  };
-
-  // Call /image to increment user's entry count
-  incrementEntries = () => {
-    const { user } = this.state;
-    if (!user) return;
-
-    fetch("http://localhost:3000/image", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: user.id }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.entries !== undefined) {
-          this.onEntryUpdate(data.entries);
-        }
-      })
-      .catch((err) => console.error("Failed to update entries:", err));
-  };
-
   onButtonSubmit = () => {
-    const { input } = this.state;
+    const { input, user } = this.state;
     if (!input) return;
 
     this.setState({ imageUrl: input, boxes: [], isLoading: true, error: "" });
 
-    const raw = JSON.stringify({
-      user_app_id: { user_id: USER_ID, app_id: APP_ID },
-      inputs: [{ data: { image: { url: input } } }],
-    });
-
-    const requestOptions = {
+    // Single request to backend — Clarifai call + entry increment happen server-side
+    fetch(`${BACKEND_URL}/imageurl`, {
       method: "POST",
-      headers: {
-        Accept: "application/json",
-        Authorization: "Key " + PAT,
-      },
-      body: raw,
-    };
-
-    fetch(
-      `/clarifai-api/v2/models/${MODEL_ID}/versions/${MODEL_VERSION_ID}/outputs`,
-      requestOptions,
-    )
-      .then((response) => response.json())
-      .then((result) => {
-        if (result.outputs && result.outputs[0].data.regions) {
-          const boxes = this.calculateFaceBoxes(result.outputs[0].data.regions);
-          this.setState({ boxes, isLoading: false });
-          this.incrementEntries();
-        } else {
-          this.setState({ isLoading: false, error: "No faces detected." });
-        }
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: input,
+        id: user ? user.id : null, // Send user id if logged in
+      }),
+    })
+      .then((res) => {
+        if (!res.ok) return res.json().then((msg) => Promise.reject(msg));
+        return res.json();
       })
-      .catch(() => {
+      .then(({ boxes, entries }) => {
+        this.setState({ boxes, isLoading: false });
+        // Update entry count if user is logged in
+        if (entries !== null) this.onEntryUpdate(entries);
+      })
+      .catch((msg) => {
         this.setState({
           isLoading: false,
-          error: "API error. Check your URL or network.",
+          error:
+            typeof msg === "string"
+              ? msg
+              : "API error. Check your URL or network.",
         });
       });
   };
