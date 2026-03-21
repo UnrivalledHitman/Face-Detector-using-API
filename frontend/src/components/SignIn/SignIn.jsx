@@ -1,7 +1,13 @@
 import { useState } from "react";
 
-const SignIn = ({ onSignIn, onClose, onGoRegister, error }) => {
-  const [email, setEmail] = useState("");
+const SignIn = ({
+  onSignIn,
+  onClose,
+  onGoRegister,
+  onForgotPassword,
+  error,
+}) => {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   return (
@@ -45,16 +51,16 @@ const SignIn = ({ onSignIn, onClose, onGoRegister, error }) => {
           </p>
         )}
 
-        {/* Email */}
+        {/* Username */}
         <div className="mb-4">
           <label className="block text-yellow-400 text-[10px] uppercase tracking-[0.2em] mb-2">
-            Email
+            Username
           </label>
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="user@domain.com"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="your_username"
             className="w-full bg-zinc-800 text-gray-200 text-sm p-3 border border-zinc-700 
                        focus:border-yellow-400/60 focus:outline-none transition-colors 
                        placeholder:text-zinc-600"
@@ -79,11 +85,18 @@ const SignIn = ({ onSignIn, onClose, onGoRegister, error }) => {
 
         {/* Submit */}
         <button
-          onClick={() => onSignIn({ email, password })}
+          onClick={() => onSignIn({ username, password })}
           className="w-full py-3 bg-yellow-400 hover:bg-yellow-300 text-black text-sm 
                      font-black uppercase tracking-widest transition-all active:scale-95"
         >
           Authenticate
+        </button>
+
+        <button
+          onClick={onForgotPassword}
+          className="mt-3 text-yellow-400 hover:text-yellow-300 transition-colors text-[10px] uppercase tracking-widest"
+        >
+          Forgot Password?
         </button>
 
         {/* Register link */}

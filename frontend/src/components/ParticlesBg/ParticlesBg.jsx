@@ -39,12 +39,12 @@ const ParticlesBg = () => {
             },
           },
           particles: {
-            color: { value: "#ffffff" },
+            color: { value: "#facc15" },
             links: {
-              color: "#ffffff",
+              color: "#facc15",
               distance: 150,
               enable: true,
-              opacity: 0.75,
+              opacity: 0.35,
               width: 1,
             },
             move: {
@@ -57,9 +57,9 @@ const ParticlesBg = () => {
             },
             number: {
               density: { enable: true, area: 800 },
-              value: 350,
+              value: 220,
             },
-            opacity: { value: 1 },
+            opacity: { value: 0.55 },
             shape: { type: "circle" },
             size: { value: { min: 1, max: 3 } },
           },

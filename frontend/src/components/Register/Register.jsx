@@ -60,16 +60,16 @@ const Register = ({ onRegister, onClose, onGoSignIn, error }) => {
           </p>
         )}
 
-        {/* Name */}
+        {/* Username */}
         <div className="mb-4">
           <label className="block text-yellow-400 text-[10px] uppercase tracking-[0.2em] mb-2">
-            Name
+            Username
           </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Your name"
+            placeholder="Choose a username"
             className="w-full bg-zinc-800 text-gray-200 text-sm p-3 border border-zinc-700 
                        focus:border-yellow-400/60 focus:outline-none transition-colors 
                        placeholder:text-zinc-600"

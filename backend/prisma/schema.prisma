@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  Int                  @id @default(autoincrement())
+  name                String               @db.VarChar(100)
+  email               String               @unique(map: "users_email_key") @db.VarChar(255)
+  entries             Int                  @default(0)
+  joined              DateTime             @default(now())
+  login               Login?
+  passwordResetTokens PasswordResetToken[]
+
+  @@map("users")
+}
+
+model Login {
+  id    Int    @id
+  email String @unique(map: "login_email_key") @db.VarChar(255)
+  hash  String @db.Text
+  user  User   @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@map("login")
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  tokenHash String   @unique @map("token_hash") @db.VarChar(128)
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, used], map: "password_reset_tokens_user_used_idx")
+  @@index([expiresAt], map: "password_reset_tokens_exp_idx")
+  @@map("password_reset_tokens")
+}

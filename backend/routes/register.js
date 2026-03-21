@@ -7,24 +7,28 @@ const router = express.Router();
 // POST /register — creates a new user account
 router.post("/", async (req, res) => {
   const { email, name, password } = req.body;
+  const normalizedEmail = email?.toLowerCase().trim();
+  const normalizedName = name?.trim();
 
-  if (!email || !name || !password) {
+  if (!normalizedEmail || !normalizedName || !password) {
     return res.status(400).json("Email, name, and password are required");
   }
 
   try {
     // Check for duplicate email in login table
-    const emailExists = await db("login")
-      .whereRaw("LOWER(email) = ?", [email.toLowerCase()])
-      .first();
+    const emailExists = await db.login.findFirst({
+      where: { email: { equals: normalizedEmail, mode: "insensitive" } },
+      select: { id: true },
+    });
     if (emailExists) {
       return res.status(409).json("An account with this email already exists");
     }
 
     // Check for duplicate name in users table
-    const nameExists = await db("users")
-      .whereRaw("LOWER(name) = ?", [name.toLowerCase()])
-      .first();
+    const nameExists = await db.user.findFirst({
+      where: { name: { equals: normalizedName, mode: "insensitive" } },
+      select: { id: true },
+    });
     if (nameExists) {
       return res.status(409).json("This username is already taken");
     }
@@ -37,12 +41,19 @@ router.post("/", async (req, res) => {
     });
 
     // Transaction — both inserts succeed or both roll back
-    const newUser = await db.transaction(async (trx) => {
-      const [user] = await trx("users")
-        .insert({ name, email, entries: 0, joined: new Date() })
-        .returning("*");
+    const newUser = await db.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          name: normalizedName,
+          email: normalizedEmail,
+          entries: 0,
+          joined: new Date(),
+        },
+      });
 
-      await trx("login").insert({ id: user.id, email, hash });
+      await tx.login.create({
+        data: { id: user.id, email: normalizedEmail, hash },
+      });
 
       return user;
     });

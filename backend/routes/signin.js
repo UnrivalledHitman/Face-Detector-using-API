@@ -6,15 +6,25 @@ const router = express.Router();
 
 // POST /signin — authenticates an existing user
 router.post("/", async (req, res) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json("Email and password are required");
+  if (!username || !password) {
+    return res.status(400).json("Username and password are required");
   }
 
   try {
-    // Find the login row by email
-    const loginRow = await db("login").where({ email }).first();
+    const userRow = await db.user.findFirst({
+      where: {
+        name: { equals: username.toLowerCase().trim(), mode: "insensitive" },
+      },
+    });
+
+    if (!userRow) {
+      return res.status(400).json("Invalid credentials");
+    }
+
+    // Find the login row by user id
+    const loginRow = await db.login.findUnique({ where: { id: userRow.id } });
     if (!loginRow) {
       return res.status(400).json("Invalid credentials");
     }
@@ -26,7 +36,7 @@ router.post("/", async (req, res) => {
     }
 
     // Fetch full profile from users table
-    const user = await db("users").where({ id: loginRow.id }).first();
+    const user = await db.user.findUnique({ where: { id: userRow.id } });
     return res.json(user);
   } catch (err) {
     console.error(err);

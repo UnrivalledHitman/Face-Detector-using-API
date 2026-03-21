@@ -2,10 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import SignIn from "../SignIn/SignIn";
 import SignOut from "../SignOut/SignOut";
 import Register from "../Register/Register";
+import ForgotPassword from "../ForgotPassword/ForgotPassword";
+import { BACKEND_URL } from "../../config";
 
-const Navigation = ({ onUserChange }) => {
+const Navigation = ({ user, onUserChange, activePage, onPageChange }) => {
   const [modal, setModal] = useState(null);
-  const [user, setUser] = useState(null);
   const [authError, setAuthError] = useState("");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileRef = useRef(null);
@@ -21,12 +22,12 @@ const Navigation = ({ onUserChange }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSignIn = async ({ email, password }) => {
+  const handleSignIn = async ({ username, password }) => {
     try {
-      const response = await fetch("http://localhost:3000/signin", {
+      const response = await fetch(`${BACKEND_URL}/signin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
 
       if (!response.ok) {
@@ -36,8 +37,7 @@ const Navigation = ({ onUserChange }) => {
       }
 
       const loggedInUser = await response.json();
-      setUser(loggedInUser);
-      onUserChange(loggedInUser); // Notify App.jsx
+      onUserChange(loggedInUser);
       setAuthError("");
       setModal(null);
     } catch {
@@ -47,7 +47,7 @@ const Navigation = ({ onUserChange }) => {
 
   const handleRegister = async ({ email, name, password }) => {
     try {
-      const response = await fetch("http://localhost:3000/register", {
+      const response = await fetch(`${BACKEND_URL}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, name, password }),
@@ -60,8 +60,7 @@ const Navigation = ({ onUserChange }) => {
       }
 
       const newUser = await response.json();
-      setUser(newUser);
-      onUserChange(newUser); // Notify App.jsx
+      onUserChange(newUser);
       setAuthError("");
       setModal(null);
     } catch {
@@ -69,9 +68,34 @@ const Navigation = ({ onUserChange }) => {
     }
   };
 
+  const handleForgotPassword = async (email) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/password/forgot`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setAuthError(
+          typeof data === "string" ? data : "Unable to send reset email",
+        );
+        return "";
+      }
+
+      setAuthError("");
+      return typeof data === "string"
+        ? data
+        : "If this email exists, a reset link has been sent.";
+    } catch {
+      setAuthError("Could not reach the server. Is it running?");
+      return "";
+    }
+  };
+
   const handleSignOut = () => {
-    setUser(null);
-    onUserChange(null); // Notify App.jsx
+    onUserChange(null);
     setModal(null);
     setShowProfileMenu(false);
   };
@@ -91,7 +115,28 @@ const Navigation = ({ onUserChange }) => {
 
   return (
     <>
-      <nav className="flex justify-end items-center gap-3">
+      <nav className="flex justify-end items-center gap-3 flex-wrap">
+        <button
+          onClick={() => onPageChange("detector")}
+          className={`px-4 py-2 font-mono text-[10px] uppercase tracking-[0.2em] border transition-colors ${
+            activePage === "detector"
+              ? "text-black bg-yellow-400 border-yellow-400"
+              : "text-yellow-400 border-yellow-400/40 hover:border-yellow-400"
+          }`}
+        >
+          Detector
+        </button>
+        <button
+          onClick={() => onPageChange("leaderboard")}
+          className={`px-4 py-2 font-mono text-[10px] uppercase tracking-[0.2em] border transition-colors ${
+            activePage === "leaderboard"
+              ? "text-black bg-yellow-400 border-yellow-400"
+              : "text-yellow-400 border-yellow-400/40 hover:border-yellow-400"
+          }`}
+        >
+          Leaderboard
+        </button>
+
         {user ? (
           <div className="relative" ref={profileRef}>
             <button
@@ -149,6 +194,10 @@ const Navigation = ({ onUserChange }) => {
         <SignIn
           onClose={closeModal}
           onSignIn={handleSignIn}
+          onForgotPassword={() => {
+            setAuthError("");
+            setModal("forgotpassword");
+          }}
           onGoRegister={() => {
             setAuthError("");
             setModal("register");
@@ -171,6 +220,14 @@ const Navigation = ({ onUserChange }) => {
 
       {modal === "signout" && (
         <SignOut user={user} onClose={closeModal} onSignOut={handleSignOut} />
+      )}
+
+      {modal === "forgotpassword" && (
+        <ForgotPassword
+          onClose={closeModal}
+          onSubmit={handleForgotPassword}
+          error={authError}
+        />
       )}
     </>
   );
