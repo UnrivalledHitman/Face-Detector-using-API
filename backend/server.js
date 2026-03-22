@@ -1,30 +1,20 @@
 require("dotenv").config();
 
-const express = require("express");
 const http = require("http");
-const cors = require("cors");
-const bodyParser = require("body-parser");
 const { Server } = require("socket.io");
-const ensureSchema = require("./utils/ensureSchema");
+const createApp = require("./app");
 
-const signinRouter = require("./routes/signin");
-const registerRouter = require("./routes/register");
-const profileRouter = require("./routes/profile");
-const imageurlRouter = require("./routes/imageurl");
-const rankRouter = require("./routes/rank");
-const passwordRouter = require("./routes/password");
-
-const app = express();
+const ioStub = { emit: () => {} };
+const app = createApp(ioStub);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: (process.env.FRONTEND_URL || "http://localhost:5173")
+      .split(",")
+      .map((origin) => origin.trim()),
     methods: ["GET", "POST"],
   },
 });
-
-app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
-app.use(bodyParser.json());
 
 io.on("connection", (socket) => {
   console.log(`Socket connected: ${socket.id}`);
@@ -33,22 +23,10 @@ io.on("connection", (socket) => {
   });
 });
 
-// Routes
-app.use("/signin", signinRouter);
-app.use("/register", registerRouter);
-app.use("/profile", profileRouter);
-app.use("/imageurl", imageurlRouter(io));
-app.use("/rank", rankRouter);
-app.use("/password", passwordRouter);
+// Rebind image emitter for local/dev realtime updates.
+ioStub.emit = io.emit.bind(io);
 
-ensureSchema()
-  .then(() => {
-    const port = process.env.PORT || 3000;
-    server.listen(port, () => {
-      console.log(`Backend server running on port ${port}.`);
-    });
-  })
-  .catch((err) => {
-    console.error("Schema initialization failed", err);
-    process.exit(1);
-  });
+const port = process.env.PORT || 3000;
+server.listen(port, () => {
+  console.log(`Backend server running on port ${port}.`);
+});

@@ -11,6 +11,10 @@ import FaceRecognition from "./components/FaceRecognition/FaceRecognition";
 import ResetPasswordPage from "./components/ResetPasswordPage/ResetPasswordPage";
 import { BACKEND_URL, WS_URL } from "./config";
 
+const realtimeEnabled =
+  import.meta.env.VITE_ENABLE_REALTIME === "true" ||
+  (!import.meta.env.PROD && import.meta.env.VITE_ENABLE_REALTIME !== "false");
+
 class App extends Component {
   constructor() {
     super();
@@ -33,34 +37,36 @@ class App extends Component {
 
   componentDidMount() {
     this.fetchLeaderboard();
-    this.socket = io(WS_URL);
-    this.socket.on("entryUpdated", ({ userId, entries }) => {
-      this.setState(
-        (prev) => {
-          const updatedUser =
-            prev.user && Number(prev.user.id) === Number(userId)
-              ? { ...prev.user, entries }
-              : prev.user;
+    if (realtimeEnabled) {
+      this.socket = io(WS_URL);
+      this.socket.on("entryUpdated", ({ userId, entries }) => {
+        this.setState(
+          (prev) => {
+            const updatedUser =
+              prev.user && Number(prev.user.id) === Number(userId)
+                ? { ...prev.user, entries }
+                : prev.user;
 
-          const leaderboard = prev.leaderboard
-            .map((row) =>
-              Number(row.id) === Number(userId) ? { ...row, entries } : row,
-            )
-            .sort((a, b) => b.entries - a.entries)
-            .map((row, index) => ({ ...row, rank: index + 1 }));
+            const leaderboard = prev.leaderboard
+              .map((row) =>
+                Number(row.id) === Number(userId) ? { ...row, entries } : row,
+              )
+              .sort((a, b) => b.entries - a.entries)
+              .map((row, index) => ({ ...row, rank: index + 1 }));
 
-          return { user: updatedUser, leaderboard };
-        },
-        () => {
-          if (
-            this.state.user &&
-            Number(this.state.user.id) === Number(userId)
-          ) {
-            this.fetchRank();
-          }
-        },
-      );
-    });
+            return { user: updatedUser, leaderboard };
+          },
+          () => {
+            if (
+              this.state.user &&
+              Number(this.state.user.id) === Number(userId)
+            ) {
+              this.fetchRank();
+            }
+          },
+        );
+      });
+    }
   }
 
   componentWillUnmount() {
