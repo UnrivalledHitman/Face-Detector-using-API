@@ -17,7 +17,6 @@ Environment variables in Vercel (Backend project):
 
 - `DATABASE_URL` = your Prisma Postgres connection string
 - `FRONTEND_URL` = your frontend URL (use comma-separated values if needed)
-  - Example: `https://your-frontend.vercel.app,http://localhost:5173`
 - `CLARIFAI_PAT`
 - `CLARIFAI_USER_ID`
 - `CLARIFAI_APP_ID`
@@ -39,7 +38,6 @@ npm run prisma:seed
 Environment variables in Vercel (Frontend project):
 
 - `VITE_BACKEND_URL` = deployed backend URL
-  - Example: `https://your-backend.vercel.app`
 - Optional: `VITE_ENABLE_REALTIME=false` (recommended on Vercel serverless backend)
 
 ### Notes
