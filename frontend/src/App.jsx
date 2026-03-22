@@ -33,6 +33,8 @@ class App extends Component {
       leaderboardError: "",
     };
     this.socket = null;
+    this.lastLeaderboardFetchAt = 0;
+    this.rankRefreshTimer = null;
   }
 
   componentDidMount() {
@@ -74,7 +76,7 @@ class App extends Component {
               this.state.user &&
               Number(this.state.user.id) === Number(userId)
             ) {
-              this.fetchRank();
+              this.scheduleRankRefresh(150);
             }
           },
         );
@@ -83,10 +85,26 @@ class App extends Component {
   }
 
   componentWillUnmount() {
+    if (this.rankRefreshTimer) {
+      clearTimeout(this.rankRefreshTimer);
+      this.rankRefreshTimer = null;
+    }
+
     if (this.socket) {
       this.socket.disconnect();
     }
   }
+
+  scheduleRankRefresh = (delay = 200) => {
+    if (this.rankRefreshTimer) {
+      clearTimeout(this.rankRefreshTimer);
+    }
+
+    this.rankRefreshTimer = setTimeout(() => {
+      this.rankRefreshTimer = null;
+      this.fetchRank();
+    }, delay);
+  };
 
   fetchRank = () => {
     const { user } = this.state;
@@ -100,7 +118,19 @@ class App extends Component {
       .catch((err) => console.error("Failed to fetch rank:", err));
   };
 
-  fetchLeaderboard = () => {
+  fetchLeaderboard = ({ force = false } = {}) => {
+    const { leaderboard, leaderboardLoading } = this.state;
+    const now = Date.now();
+
+    if (leaderboardLoading) return;
+    if (
+      !force &&
+      leaderboard.length > 0 &&
+      now - this.lastLeaderboardFetchAt < 10000
+    ) {
+      return;
+    }
+
     this.setState({ leaderboardLoading: true, leaderboardError: "" });
     fetch(`${BACKEND_URL}/rank/leaderboard?limit=100`)
       .then((res) => {
@@ -110,6 +140,7 @@ class App extends Component {
         return res.json();
       })
       .then((rows) => {
+        this.lastLeaderboardFetchAt = Date.now();
         this.setState({ leaderboard: rows, leaderboardLoading: false });
       })
       .catch((msg) => {
@@ -168,7 +199,7 @@ class App extends Component {
         };
       },
       () => {
-        this.fetchRank();
+        this.scheduleRankRefresh();
       },
     );
   };

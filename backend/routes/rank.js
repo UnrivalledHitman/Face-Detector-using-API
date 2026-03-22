@@ -2,16 +2,27 @@ const express = require("express");
 const db = require("../db");
 
 const router = express.Router();
+const LEADERBOARD_TTL_MS = 5000;
+const TOTAL_USERS_TTL_MS = 30000;
+
+const leaderboardCache = new Map();
+let totalUsersCache = { value: null, at: 0 };
 
 // GET /rank/leaderboard — returns all users sorted by entries descending
 router.get("/leaderboard", async (req, res) => {
   const limit = Number(req.query.limit) || 100;
+  const safeLimit = Math.min(limit, 500);
+  const cached = leaderboardCache.get(safeLimit);
+
+  if (cached && Date.now() - cached.at < LEADERBOARD_TTL_MS) {
+    return res.json(cached.value);
+  }
 
   try {
     const rows = await db.user.findMany({
       select: { id: true, name: true, entries: true, joined: true },
       orderBy: [{ entries: "desc" }, { joined: "asc" }],
-      take: Math.min(limit, 500),
+      take: safeLimit,
     });
 
     const leaderboard = rows.map((row, index) => ({
@@ -20,6 +31,8 @@ router.get("/leaderboard", async (req, res) => {
       entries: row.entries,
       rank: index + 1,
     }));
+
+    leaderboardCache.set(safeLimit, { value: leaderboard, at: Date.now() });
 
     return res.json(leaderboard);
   } catch (err) {
@@ -37,7 +50,10 @@ router.get("/:id", async (req, res) => {
   }
 
   try {
-    const user = await db.user.findUnique({ where: { id } });
+    const user = await db.user.findUnique({
+      where: { id },
+      select: { id: true, entries: true },
+    });
     if (!user) return res.status(404).json("User not found");
 
     // Count users with strictly more entries
@@ -45,8 +61,12 @@ router.get("/:id", async (req, res) => {
       where: { entries: { gt: user.entries } },
     });
 
-    // Count total users
-    const total = await db.user.count();
+    const now = Date.now();
+    let total = totalUsersCache.value;
+    if (total === null || now - totalUsersCache.at >= TOTAL_USERS_TTL_MS) {
+      total = await db.user.count();
+      totalUsersCache = { value: total, at: now };
+    }
 
     return res.json({
       rank: higher + 1,

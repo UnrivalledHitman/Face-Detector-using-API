@@ -36,6 +36,9 @@ async function ensureSchema() {
   await db.$executeRawUnsafe(
     "CREATE INDEX IF NOT EXISTS password_reset_tokens_exp_idx ON password_reset_tokens (expires_at)",
   );
+  await db.$executeRawUnsafe(
+    "CREATE INDEX IF NOT EXISTS users_entries_joined_idx ON users (entries DESC, joined ASC)",
+  );
 
   // Enforce case-insensitive uniqueness at DB level.
   await db.$executeRawUnsafe(
