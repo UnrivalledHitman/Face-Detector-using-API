@@ -2,10 +2,10 @@ const Rank = ({ user, rank, totalUsers }) => {
   if (!user) {
     return (
       <div className="flex items-center justify-center font-mono w-full px-4">
-        <div className="relative flex flex-row items-center justify-center px-8 py-4 border border-yellow-400/20 bg-zinc-900/80">
-          <span className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-yellow-400/40" />
-          <span className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-yellow-400/40" />
-          <p className="text-zinc-500 text-[10px] uppercase tracking-[0.2em]">
+        <div className="relative flex flex-row items-center justify-center px-8 py-4 border-2 border-yellow-400/45 bg-zinc-900/90 shadow-[0_0_35px_rgba(250,204,21,0.2)] transition-all duration-300">
+          <span className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-yellow-400/80" />
+          <span className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-yellow-400/80" />
+          <p className="text-yellow-200 text-[10px] uppercase tracking-[0.2em] drop-shadow-[0_0_10px_rgba(250,204,21,0.55)]">
             Log in to track your detections
           </p>
         </div>
