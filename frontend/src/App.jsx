@@ -36,6 +36,19 @@ class App extends Component {
   }
 
   componentDidMount() {
+    // Restore user from localStorage if available
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      try {
+        this.setState({ user: JSON.parse(savedUser) }, () => {
+          this.fetchRank();
+        });
+      } catch (e) {
+        console.error("Failed to restore user from localStorage", e);
+        localStorage.removeItem("user");
+      }
+    }
+
     this.fetchLeaderboard();
     if (realtimeEnabled) {
       this.socket = io(WS_URL);
@@ -111,6 +124,13 @@ class App extends Component {
   };
 
   onUserChange = (user) => {
+    // Save or clear user in localStorage
+    if (user) {
+      localStorage.setItem("user", JSON.stringify(user));
+    } else {
+      localStorage.removeItem("user");
+    }
+
     this.setState(
       {
         user,
