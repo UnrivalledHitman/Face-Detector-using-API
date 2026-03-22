@@ -33,7 +33,6 @@ function App() {
     onPageChange,
     onInputChange,
     onFileSelect,
-    onButtonSubmit,
   } = useAppStore(
     useShallow((state) => ({
       user: state.user,
@@ -56,7 +55,6 @@ function App() {
       onPageChange: state.onPageChange,
       onInputChange: state.onInputChange,
       onFileSelect: state.onFileSelect,
-      onButtonSubmit: state.onButtonSubmit,
     })),
   );
 
@@ -128,7 +126,6 @@ function App() {
             boxes={boxes}
             onInputChange={handleInputChange}
             onFileChange={handleFileChange}
-            onButtonSubmit={onButtonSubmit}
           />
         ) : (
           <LeaderboardView

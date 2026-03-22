@@ -13,7 +13,6 @@ function DetectorView({
   boxes,
   onInputChange,
   onFileChange,
-  onButtonSubmit,
 }) {
   return (
     <>
@@ -23,7 +22,6 @@ function DetectorView({
         <ImageLinkForm
           onInputChange={onInputChange}
           onFileChange={onFileChange}
-          onButtonSubmit={onButtonSubmit}
           isLoading={isLoading}
           selectedFileName={selectedFileName}
         />
