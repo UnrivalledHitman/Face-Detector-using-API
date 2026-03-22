@@ -15,7 +15,7 @@ const parseApiResponse = async (response) => {
 export const fetchRankByUserId = (userId) =>
   fetch(`${BACKEND_URL}/rank/${userId}`).then(parseApiResponse);
 
-export const fetchLeaderboardRows = (limit = 100) =>
+export const fetchLeaderboardRows = (limit = 10) =>
   fetch(`${BACKEND_URL}/rank/leaderboard?limit=${limit}`).then(
     parseApiResponse,
   );

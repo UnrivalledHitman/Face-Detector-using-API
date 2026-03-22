@@ -6,7 +6,7 @@ const Leaderboard = ({ rows, loading, error }) => {
           Global Leaderboard
         </h2>
         <span className="text-zinc-500 text-[10px] uppercase tracking-widest">
-          Top {rows.length} Users
+          Top Users
         </span>
       </header>
 

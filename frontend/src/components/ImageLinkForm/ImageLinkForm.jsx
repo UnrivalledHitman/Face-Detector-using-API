@@ -29,7 +29,7 @@ const ImageLinkForm = ({
           htmlFor="image-upload"
           className="w-full sm:w-auto py-4 px-4 bg-zinc-800 hover:bg-zinc-700 
                      text-yellow-100 font-semibold rounded-xl border border-zinc-600
-                     text-center cursor-pointer transition-all shrink-0"
+                     inline-flex items-center justify-center text-center cursor-pointer transition-all shrink-0"
         >
           Upload Image
         </label>

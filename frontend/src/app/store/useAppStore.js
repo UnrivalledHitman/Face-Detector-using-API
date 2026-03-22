@@ -14,11 +14,19 @@ import {
 
 let lastLeaderboardFetchAt = 0;
 let rankRefreshTimer = null;
+let autoDetectTimer = null;
+let lastAutoSubmittedInput = "";
 
 const clearRankRefreshTimerInternal = () => {
   if (!rankRefreshTimer) return;
   clearTimeout(rankRefreshTimer);
   rankRefreshTimer = null;
+};
+
+const clearAutoDetectTimerInternal = () => {
+  if (!autoDetectTimer) return;
+  clearTimeout(autoDetectTimer);
+  autoDetectTimer = null;
 };
 
 const scheduleRankRefreshInternal = (delay, get) => {
@@ -27,6 +35,23 @@ const scheduleRankRefreshInternal = (delay, get) => {
     rankRefreshTimer = null;
     get().fetchRank();
   }, delay);
+};
+
+const scheduleAutoDetectInternal = (delay, callback) => {
+  clearAutoDetectTimerInternal();
+  autoDetectTimer = setTimeout(() => {
+    autoDetectTimer = null;
+    callback();
+  }, delay);
+};
+
+const isValidHttpUrl = (value) => {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
 };
 
 const readFileAsDataUrl = (file) =>
@@ -92,7 +117,7 @@ const useAppStore = create((set, get) => ({
 
     set({ leaderboardLoading: true, leaderboardError: "" });
     try {
-      const rows = await fetchLeaderboardRows(100);
+      const rows = await fetchLeaderboardRows(10);
       lastLeaderboardFetchAt = Date.now();
       set({ leaderboard: rows, leaderboardLoading: false });
     } catch (msg) {
@@ -166,10 +191,33 @@ const useAppStore = create((set, get) => ({
   },
 
   onInputChange: (nextInput) => {
+    const normalizedInput = nextInput.trim();
+
     set({
       input: nextInput,
       uploadedImageDataUrl: "",
       selectedFileName: "",
+    });
+
+    if (!isValidHttpUrl(normalizedInput)) {
+      clearAutoDetectTimerInternal();
+      return;
+    }
+
+    if (normalizedInput === lastAutoSubmittedInput) {
+      return;
+    }
+
+    scheduleAutoDetectInternal(350, () => {
+      const { input, isLoading } = get();
+      const currentInput = input.trim();
+
+      if (isLoading || currentInput !== normalizedInput) {
+        return;
+      }
+
+      lastAutoSubmittedInput = normalizedInput;
+      get().onButtonSubmit();
     });
   },
 
@@ -197,6 +245,8 @@ const useAppStore = create((set, get) => ({
         boxes: [],
         error: "",
       });
+      lastAutoSubmittedInput = "";
+      get().onButtonSubmit();
     } catch {
       set({ error: "Could not read the selected image." });
     }
@@ -236,6 +286,7 @@ const useAppStore = create((set, get) => ({
 
   clearAsyncWork: () => {
     clearRankRefreshTimerInternal();
+    clearAutoDetectTimerInternal();
   },
 }));
 
