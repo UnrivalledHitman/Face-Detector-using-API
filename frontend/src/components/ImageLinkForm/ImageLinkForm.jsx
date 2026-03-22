@@ -1,4 +1,5 @@
 const ImageLinkForm = ({
+  inputValue,
   onInputChange,
   onFileChange,
   isLoading,
@@ -21,6 +22,7 @@ const ImageLinkForm = ({
           className="grow bg-zinc-900 text-yellow-50 p-4 rounded-xl 
                      outline-none border border-zinc-700 focus:border-yellow-400/70 
                      transition-all text-base md:text-lg min-w-0"
+          value={inputValue}
           onChange={onInputChange}
           disabled={isLoading}
         />
@@ -49,7 +51,7 @@ const ImageLinkForm = ({
 
       <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-yellow-200/80 text-center">
         {selectedFileName
-          ? `Selected: ${selectedFileName}`
+          ? `Uploaded locally by user: ${selectedFileName}`
           : "No local file selected"}
       </p>
     </div>

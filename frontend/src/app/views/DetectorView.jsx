@@ -6,6 +6,7 @@ function DetectorView({
   user,
   rank,
   totalUsers,
+  input,
   isLoading,
   selectedFileName,
   error,
@@ -20,6 +21,7 @@ function DetectorView({
 
       <div className="w-full max-w-2xl">
         <ImageLinkForm
+          inputValue={input}
           onInputChange={onInputChange}
           onFileChange={onFileChange}
           isLoading={isLoading}

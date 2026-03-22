@@ -16,6 +16,7 @@ function App() {
     user,
     rank,
     totalUsers,
+    input,
     isLoading,
     selectedFileName,
     error,
@@ -38,6 +39,7 @@ function App() {
       user: state.user,
       rank: state.rank,
       totalUsers: state.totalUsers,
+      input: state.input,
       isLoading: state.isLoading,
       selectedFileName: state.selectedFileName,
       error: state.error,
@@ -119,6 +121,7 @@ function App() {
             user={user}
             rank={rank}
             totalUsers={totalUsers}
+            input={input}
             isLoading={isLoading}
             selectedFileName={selectedFileName}
             error={error}
