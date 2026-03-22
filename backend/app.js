@@ -46,7 +46,7 @@ function createApp(io = { emit: () => {} }) {
   });
 
   app.use(cors(corsOptions));
-  app.use(bodyParser.json());
+  app.use(bodyParser.json({ limit: "10mb" }));
 
   app.get("/health", (_req, res) => {
     res.json({ ok: true });

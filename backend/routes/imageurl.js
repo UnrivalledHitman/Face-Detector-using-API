@@ -6,10 +6,25 @@ module.exports = (io) => {
 
   // POST /imageurl — calls Clarifai, returns boxes, increments user entries
   router.post("/", async (req, res) => {
-    const { url, id } = req.body;
+    const { url, imageBase64, id } = req.body;
 
-    if (!url) {
-      return res.status(400).json("Image URL is required");
+    if (!url && !imageBase64) {
+      return res.status(400).json("Image URL or uploaded image is required");
+    }
+
+    let imageInput;
+    if (url) {
+      imageInput = { url };
+    } else {
+      const sanitizedBase64 = String(imageBase64)
+        .replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, "")
+        .trim();
+
+      if (!sanitizedBase64) {
+        return res.status(400).json("Uploaded image is invalid");
+      }
+
+      imageInput = { base64: sanitizedBase64 };
     }
 
     const raw = JSON.stringify({
@@ -17,7 +32,7 @@ module.exports = (io) => {
         user_id: process.env.CLARIFAI_USER_ID,
         app_id: process.env.CLARIFAI_APP_ID,
       },
-      inputs: [{ data: { image: { url } } }],
+      inputs: [{ data: { image: imageInput } }],
     });
 
     try {
