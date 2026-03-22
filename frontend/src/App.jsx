@@ -220,6 +220,19 @@ class App extends Component {
     const { input, user } = this.state;
     if (!input) return;
 
+    // Validate that input is a proper http(s) URL before sending to the backend.
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(input);
+    } catch {
+      this.setState({ error: "Please enter a valid image URL (http or https)." });
+      return;
+    }
+    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+      this.setState({ error: "Only http and https URLs are supported." });
+      return;
+    }
+
     this.setState({ imageUrl: input, boxes: [], isLoading: true, error: "" });
 
     // Single request to backend — Clarifai call + entry increment happen server-side

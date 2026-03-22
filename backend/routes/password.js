@@ -10,6 +10,22 @@ const forgotRateLimitStore = new Map();
 const FORGOT_WINDOW_MS = 15 * 60 * 1000;
 const FORGOT_MAX_ATTEMPTS = 5;
 
+// Basic email format check.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Periodically prune expired entries to prevent unbounded memory growth.
+setInterval(() => {
+  const windowStart = Date.now() - FORGOT_WINDOW_MS;
+  for (const [key, timestamps] of forgotRateLimitStore) {
+    const active = timestamps.filter((t) => t > windowStart);
+    if (active.length === 0) {
+      forgotRateLimitStore.delete(key);
+    } else {
+      forgotRateLimitStore.set(key, active);
+    }
+  }
+}, FORGOT_WINDOW_MS).unref();
+
 function buildResetUrl(token) {
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
   const base = frontendUrl.endsWith("/")
@@ -35,6 +51,7 @@ function forgotPasswordRateLimit(req, res, next) {
 
   attempts.push(now);
   forgotRateLimitStore.set(ip, attempts);
+
   return next();
 }
 
@@ -43,6 +60,10 @@ router.post("/forgot", forgotPasswordRateLimit, async (req, res) => {
 
   if (!email) {
     return res.status(400).json("Email is required");
+  }
+
+  if (!EMAIL_RE.test(email.trim())) {
+    return res.status(400).json("Invalid email address");
   }
 
   if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {

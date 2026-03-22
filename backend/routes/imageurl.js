@@ -1,6 +1,43 @@
 const express = require("express");
 const db = require("../db");
 
+// Private/link-local IP ranges that must not be reached via SSRF.
+// Covers IPv4 private ranges, loopback, link-local, IPv6 loopback (::1),
+// IPv4-mapped IPv6 (::ffff:), and IPv6 unique-local / link-local prefixes.
+const PRIVATE_IP_RE =
+  /^(localhost|.*\.local)(:\d+)?$|^(10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+|127\.\d+\.\d+\.\d+|169\.254\.\d+\.\d+|0\.0\.0\.0)(:\d+)?$/i;
+
+// IPv6 private/loopback patterns (bracketed form as used in URLs).
+const PRIVATE_IPV6_RE =
+  /^\[?(::1|::ffff:[0-9a-f:.]+|fc[0-9a-f]{2}:[0-9a-f:]*|fd[0-9a-f]{2}:[0-9a-f:]*|fe[89ab][0-9a-f]:[0-9a-f:]*)\]?$/i;
+
+/**
+ * Returns true if the given URL is safe to forward to Clarifai.
+ * Rejects non-http(s) schemes and private/loopback hosts.
+ */
+function isSafeImageUrl(raw) {
+  let parsed;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return false;
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return false;
+  }
+
+  if (PRIVATE_IP_RE.test(parsed.hostname)) {
+    return false;
+  }
+
+  if (PRIVATE_IPV6_RE.test(parsed.hostname)) {
+    return false;
+  }
+
+  return true;
+}
+
 module.exports = (io) => {
   const router = express.Router();
 
@@ -10,6 +47,10 @@ module.exports = (io) => {
 
     if (!url) {
       return res.status(400).json("Image URL is required");
+    }
+
+    if (!isSafeImageUrl(url)) {
+      return res.status(400).json("Invalid or disallowed image URL");
     }
 
     const raw = JSON.stringify({

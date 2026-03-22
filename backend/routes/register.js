@@ -4,6 +4,9 @@ const db = require("../db");
 
 const router = express.Router();
 
+// Basic RFC-5322-inspired email format check (no external deps).
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // POST /register — creates a new user account
 router.post("/", async (req, res) => {
   const { email, name, password } = req.body;
@@ -12,6 +15,14 @@ router.post("/", async (req, res) => {
 
   if (!normalizedEmail || !normalizedName || !password) {
     return res.status(400).json("Email, name, and password are required");
+  }
+
+  if (!EMAIL_RE.test(normalizedEmail)) {
+    return res.status(400).json("Invalid email address");
+  }
+
+  if (password.length < 8) {
+    return res.status(400).json("Password must be at least 8 characters");
   }
 
   try {

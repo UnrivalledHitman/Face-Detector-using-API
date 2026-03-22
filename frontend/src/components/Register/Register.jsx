@@ -12,6 +12,14 @@ const Register = ({ onRegister, onClose, onGoSignIn, error }) => {
       setLocalError("All fields are required.");
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setLocalError("Please enter a valid email address.");
+      return;
+    }
+    if (password.length < 8) {
+      setLocalError("Password must be at least 8 characters.");
+      return;
+    }
     if (password !== confirm) {
       setLocalError("Passwords do not match.");
       return;
