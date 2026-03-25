@@ -9,8 +9,9 @@ import {
 import {
   fetchLeaderboardRows,
   fetchRankByUserId,
-  submitImageForDetection,
+  submitImageEntry,
 } from "../services/api";
+import { detectFacesInImage, warmUpFaceApi } from "../services/faceDetection";
 
 let lastLeaderboardFetchAt = 0;
 let rankRefreshTimer = null;
@@ -77,6 +78,10 @@ const useAppStore = create((set, get) => ({
   ...createInitialState(),
 
   restoreUserFromStorage: () => {
+    warmUpFaceApi().catch((err) => {
+      console.error("Failed to preload face-api.js models:", err);
+    });
+
     const savedUser = localStorage.getItem("user");
     if (!savedUser) return;
 
@@ -271,15 +276,30 @@ const useAppStore = create((set, get) => ({
     });
 
     try {
-      const { boxes, entries } = await submitImageForDetection(payload);
+      const boxes = await detectFacesInImage(nextImageUrl);
+
+      if (!boxes.length) {
+        set({
+          boxes: [],
+          isLoading: false,
+          error: "No faces detected.",
+        });
+        return;
+      }
+
       set({ boxes, isLoading: false });
-      if (entries !== null) {
+
+      if (payload.id !== null) {
+        const { entries } = await submitImageEntry(payload);
         get().onEntryUpdate(entries);
       }
     } catch (msg) {
       set({
         isLoading: false,
-        error: parseErrorMessage(msg, "API error. Check your URL or network."),
+        error: parseErrorMessage(
+          msg,
+          "Detection failed. Try another image URL or upload an image.",
+        ),
       });
     }
   },

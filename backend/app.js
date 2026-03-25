@@ -8,7 +8,9 @@ const ensureSchema = require("./utils/ensureSchema");
 const signinRouter = require("./routes/signin");
 const registerRouter = require("./routes/register");
 const profileRouter = require("./routes/profile");
+const imageRouter = require("./routes/image");
 const imageurlRouter = require("./routes/imageurl");
+const imageProxyRouter = require("./routes/imageproxy");
 const rankRouter = require("./routes/rank");
 const passwordRouter = require("./routes/password");
 
@@ -55,7 +57,9 @@ function createApp(io = { emit: () => {} }) {
   app.use("/signin", signinRouter);
   app.use("/register", registerRouter);
   app.use("/profile", profileRouter);
+  app.use("/image", imageRouter(io));
   app.use("/imageurl", imageurlRouter(io));
+  app.use("/imageproxy", imageProxyRouter);
   app.use("/rank", rankRouter);
   app.use("/password", passwordRouter);
 

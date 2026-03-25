@@ -20,9 +20,16 @@ export const fetchLeaderboardRows = (limit = 10) =>
     parseApiResponse,
   );
 
-export const submitImageForDetection = (payload) =>
-  fetch(`${BACKEND_URL}/imageurl`, {
+export const submitImageEntry = (payload) =>
+  fetch(`${BACKEND_URL}/image`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+  }).then(parseApiResponse);
+
+export const fetchImageDataUrlFromProxy = (url) =>
+  fetch(`${BACKEND_URL}/imageproxy`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
   }).then(parseApiResponse);

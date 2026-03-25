@@ -1,18 +1,58 @@
-# React + Vite
+# Frontend: Face Detector
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This frontend is built with React + Vite and performs face detection in-browser using `face-api.js`.
 
-Currently, two official plugins are available:
+For full-stack architecture, API docs, and deployment instructions, see the root project README at `../README.md`.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Frontend Tech Stack
 
-## React Compiler
+- React 19
+- Vite 7
+- Zustand
+- Tailwind CSS 4
+- face-api.js (`TinyFaceDetector`)
+- Socket.IO client
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+## Environment Variables
 
-Note: This will impact Vite dev & build performances.
+Create `frontend/.env` as needed:
 
-## Expanding the ESLint configuration
+- `VITE_BACKEND_URL=http://localhost:3000`
+- `VITE_WS_URL=http://localhost:3000` (optional)
+- `VITE_FACE_API_MODEL_URL=/models` (optional, default `/models`)
+- `VITE_ENABLE_REALTIME=true` (optional)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Model Files (Required for Local Models)
+
+Place these files in `frontend/public/models`:
+
+- `tiny_face_detector_model-weights_manifest.json`
+- `tiny_face_detector_model-shard1`
+
+Without these files, detection may rely on configured fallback model URLs.
+
+## Available Scripts
+
+- `npm run dev` start local dev server
+- `npm run build` create production build
+- `npm run preview` preview production build locally
+- `npm run lint` run ESLint
+
+## Local Run
+
+From the `frontend` directory:
+
+```bash
+npm install
+npm run dev
+```
+
+Open the app on the URL printed by Vite (usually `http://localhost:5173`).
+
+## Detection Flow (Frontend)
+
+1. User pastes image URL or uploads local image.
+2. Frontend attempts direct browser image load.
+3. If URL load fails due to CORS, frontend calls backend `POST /imageproxy` to fetch an image data URL.
+4. `face-api.js` detects faces and returns bounding boxes.
+5. Frontend sends `POST /image` to increment user entries for leaderboard.

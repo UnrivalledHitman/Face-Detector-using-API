@@ -34,7 +34,13 @@ export const updateRowsForEntry = (rows, userId, entries) =>
   );
 
 export const parseErrorMessage = (msg, fallback) =>
-  typeof msg === "string" ? msg : fallback;
+  typeof msg === "string"
+    ? msg
+    : msg instanceof Error && msg.message
+      ? msg.message
+      : msg && typeof msg === "object" && "error" in msg
+        ? String(msg.error)
+        : fallback;
 
 export const buildImageSubmission = ({
   input,
@@ -44,14 +50,7 @@ export const buildImageSubmission = ({
   const trimmedInput = input.trim();
   if (!trimmedInput && !uploadedImageDataUrl) return null;
 
-  const payload = { id: userId ?? null };
   const nextImageUrl = trimmedInput || uploadedImageDataUrl;
 
-  if (trimmedInput) {
-    payload.url = trimmedInput;
-  } else {
-    payload.imageBase64 = uploadedImageDataUrl;
-  }
-
-  return { payload, nextImageUrl };
+  return { payload: { id: userId ?? null }, nextImageUrl };
 };
