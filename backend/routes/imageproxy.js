@@ -2,7 +2,7 @@ const express = require("express");
 
 const router = express.Router();
 
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 10000;
 
 const isHttpUrl = (value) => {
@@ -60,7 +60,7 @@ router.post("/", async (req, res) => {
       if (!Number.isNaN(contentLength) && contentLength > MAX_IMAGE_BYTES) {
         return res
           .status(413)
-          .json("Image is too large. Try an image smaller than 8MB.");
+          .json("Image is too large. Try an image smaller than 25MB.");
       }
     }
 
@@ -70,7 +70,7 @@ router.post("/", async (req, res) => {
     if (buffer.byteLength > MAX_IMAGE_BYTES) {
       return res
         .status(413)
-        .json("Image is too large. Try an image smaller than 8MB.");
+        .json("Image is too large. Try an image smaller than 25MB.");
     }
 
     const dataUrl = `data:${contentType};base64,${buffer.toString("base64")}`;

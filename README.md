@@ -203,4 +203,4 @@ npm run prisma:seed
 
 - `frontend/vercel.json` handles SPA fallback.
 - `backend/vercel.json` and `backend/api/index.js` handle serverless routing.
-- Backend image proxy rejects localhost targets and limits image size to 8 MB.
+- Backend image proxy rejects localhost targets and limits image size to 25 MB.
