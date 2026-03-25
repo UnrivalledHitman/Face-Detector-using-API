@@ -18,10 +18,13 @@ const getModelUrlCandidates = () => {
   });
 };
 
-const getTinyFaceDetectorOptions = () =>
+const getTinyFaceDetectorOptions = ({
+  inputSize = 512,
+  scoreThreshold = 0.5,
+} = {}) =>
   new faceapi.TinyFaceDetectorOptions({
-    inputSize: 512,
-    scoreThreshold: 0.5,
+    inputSize,
+    scoreThreshold,
   });
 
 const clampPercent = (value) => Math.max(0, Math.min(100, value));
@@ -61,6 +64,44 @@ const loadImage = (src) =>
 
     image.src = src;
   });
+
+const detectTinyFacesAsPercentBoxes = async ({
+  input,
+  width,
+  height,
+  options,
+}) => {
+  const detections = await faceapi.detectAllFaces(
+    input,
+    getTinyFaceDetectorOptions(options),
+  );
+
+  return toPercentBoxes(detections, width, height);
+};
+
+const createUpscaledCanvas = (image, maxLongestSide = 1600) => {
+  const largestSide = Math.max(image.naturalWidth, image.naturalHeight);
+  if (!largestSide || largestSide >= maxLongestSide) {
+    return null;
+  }
+
+  const scale = maxLongestSide / largestSide;
+  if (scale <= 1.05) {
+    return null;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return null;
+  }
+
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas;
+};
 
 export const warmUpFaceApi = () => {
   if (!modelsReadyPromise) {
@@ -105,10 +146,36 @@ export const detectFacesInImage = async (imageSrc) => {
     image = await loadImage(dataUrl);
   }
 
-  const detections = await faceapi.detectAllFaces(
-    image,
-    getTinyFaceDetectorOptions(),
-  );
+  const primaryPassBoxes = await detectTinyFacesAsPercentBoxes({
+    input: image,
+    width: image.naturalWidth,
+    height: image.naturalHeight,
+    options: { inputSize: 512, scoreThreshold: 0.5 },
+  });
+  if (primaryPassBoxes.length) {
+    return primaryPassBoxes;
+  }
 
-  return toPercentBoxes(detections, image.naturalWidth, image.naturalHeight);
+  const lowThresholdBoxes = await detectTinyFacesAsPercentBoxes({
+    input: image,
+    width: image.naturalWidth,
+    height: image.naturalHeight,
+    options: { inputSize: 608, scoreThreshold: 0.35 },
+  });
+  if (lowThresholdBoxes.length) {
+    return lowThresholdBoxes;
+  }
+
+  // Upscaled retry improves recall for small/far faces in wide scene photos.
+  const upscaledCanvas = createUpscaledCanvas(image);
+  if (!upscaledCanvas) {
+    return [];
+  }
+
+  return detectTinyFacesAsPercentBoxes({
+    input: upscaledCanvas,
+    width: upscaledCanvas.width,
+    height: upscaledCanvas.height,
+    options: { inputSize: 608, scoreThreshold: 0.3 },
+  });
 };
