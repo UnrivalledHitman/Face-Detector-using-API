@@ -190,6 +190,95 @@ const createUpscaledCanvas = (image, maxLongestSide = 1600) => {
   return canvas;
 };
 
+const FOCUSED_CROP_REGIONS = [
+  { x: 0.1, y: 0.08, w: 0.8, h: 0.74 },
+  { x: 0.12, y: 0.2, w: 0.76, h: 0.72 },
+  { x: 0, y: 0.12, w: 0.62, h: 0.76 },
+  { x: 0.38, y: 0.12, w: 0.62, h: 0.76 },
+  { x: 0, y: 0.18, w: 1, h: 0.68 },
+];
+
+const createFocusedCropCanvas = (image, region, targetLongestSide = 1400) => {
+  const sourceX = Math.max(0, Math.round(region.x * image.naturalWidth));
+  const sourceY = Math.max(0, Math.round(region.y * image.naturalHeight));
+  const sourceW = Math.max(1, Math.round(region.w * image.naturalWidth));
+  const sourceH = Math.max(1, Math.round(region.h * image.naturalHeight));
+
+  if (sourceW < 32 || sourceH < 32) {
+    return null;
+  }
+
+  const scale = Math.max(1, targetLongestSide / Math.max(sourceW, sourceH));
+  const drawW = Math.max(1, Math.round(sourceW * Math.min(scale, 2.5)));
+  const drawH = Math.max(1, Math.round(sourceH * Math.min(scale, 2.5)));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = drawW;
+  canvas.height = drawH;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return null;
+  }
+
+  ctx.drawImage(image, sourceX, sourceY, sourceW, sourceH, 0, 0, drawW, drawH);
+
+  return {
+    canvas,
+    normalizedRegion: {
+      x: sourceX / image.naturalWidth,
+      y: sourceY / image.naturalHeight,
+      w: sourceW / image.naturalWidth,
+      h: sourceH / image.naturalHeight,
+    },
+  };
+};
+
+const remapCropBoxToImage = (box, normalizedRegion) => {
+  const local = toNormalizedCoords(box);
+
+  const globalX1 = normalizedRegion.x + local.x1 * normalizedRegion.w;
+  const globalY1 = normalizedRegion.y + local.y1 * normalizedRegion.h;
+  const globalX2 = normalizedRegion.x + local.x2 * normalizedRegion.w;
+  const globalY2 = normalizedRegion.y + local.y2 * normalizedRegion.h;
+
+  return {
+    topRow: clampPercent(globalY1 * 100),
+    leftCol: clampPercent(globalX1 * 100),
+    bottomRow: clampPercent((1 - globalY2) * 100),
+    rightCol: clampPercent((1 - globalX2) * 100),
+    score: box.score,
+  };
+};
+
+const detectFacesOnFocusedCrops = async (image) => {
+  const allBoxes = [];
+
+  for (const region of FOCUSED_CROP_REGIONS) {
+    const crop = createFocusedCropCanvas(image, region);
+    if (!crop) {
+      continue;
+    }
+
+    const cropBoxes = await detectTinyFacesAsPercentBoxes({
+      input: crop.canvas,
+      width: crop.canvas.width,
+      height: crop.canvas.height,
+      options: { inputSize: 608, scoreThreshold: 0.28 },
+      passWeight: 0.82,
+      minScore: 0.26,
+    });
+
+    allBoxes.push(
+      ...cropBoxes.map((box) =>
+        remapCropBoxToImage(box, crop.normalizedRegion),
+      ),
+    );
+  }
+
+  return allBoxes;
+};
+
 export const warmUpFaceApi = () => {
   if (!modelsReadyPromise) {
     modelsReadyPromise = (async () => {
@@ -272,5 +361,11 @@ export const detectFacesInImage = async (imageSrc) => {
   });
 
   mergedBoxes = applyNms([...mergedBoxes, ...upscaledBoxes]);
+
+  if (mergedBoxes.length < 2) {
+    const focusedCropBoxes = await detectFacesOnFocusedCrops(image);
+    mergedBoxes = applyNms([...mergedBoxes, ...focusedCropBoxes], 0.33);
+  }
+
   return mergedBoxes.map(dropScore);
 };
