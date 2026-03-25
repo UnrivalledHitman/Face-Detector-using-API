@@ -17,6 +17,8 @@ let lastLeaderboardFetchAt = 0;
 let rankRefreshTimer = null;
 let autoDetectTimer = null;
 let lastAutoSubmittedInput = "";
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+const MAX_UPLOAD_DIMENSION = 1920;
 
 const clearRankRefreshTimerInternal = () => {
   if (!rankRefreshTimer) return;
@@ -73,6 +75,49 @@ const readFileAsDataUrl = (file) =>
 
     reader.readAsDataURL(file);
   });
+
+const loadImageFromDataUrl = (dataUrl) =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+
+    image.onload = () => resolve(image);
+    image.onerror = () =>
+      reject(new Error("Could not process the selected image."));
+    image.src = dataUrl;
+  });
+
+const maybeDownscaleImageDataUrl = async (dataUrl, mimeType) => {
+  const image = await loadImageFromDataUrl(dataUrl);
+  const { naturalWidth, naturalHeight } = image;
+
+  const largestSide = Math.max(naturalWidth, naturalHeight);
+  if (!largestSide || largestSide <= MAX_UPLOAD_DIMENSION) {
+    return dataUrl;
+  }
+
+  const scale = MAX_UPLOAD_DIMENSION / largestSide;
+  const nextWidth = Math.max(1, Math.round(naturalWidth * scale));
+  const nextHeight = Math.max(1, Math.round(naturalHeight * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = nextWidth;
+  canvas.height = nextHeight;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Could not process the selected image.");
+  }
+
+  ctx.drawImage(image, 0, 0, nextWidth, nextHeight);
+
+  const outputMimeType = /^image\/(jpeg|jpg|png|webp)$/i.test(mimeType)
+    ? mimeType
+    : "image/jpeg";
+
+  return outputMimeType === "image/png"
+    ? canvas.toDataURL(outputMimeType)
+    : canvas.toDataURL(outputMimeType, 0.9);
+};
 
 const useAppStore = create((set, get) => ({
   ...createInitialState(),
@@ -234,14 +279,17 @@ const useAppStore = create((set, get) => ({
       return;
     }
 
-    const maxSizeBytes = 5 * 1024 * 1024;
-    if (file.size > maxSizeBytes) {
-      set({ error: "Please upload an image smaller than 5MB." });
+    if (file.size > MAX_UPLOAD_BYTES) {
+      set({ error: "Please upload an image smaller than 25MB." });
       return;
     }
 
     try {
-      const dataUrl = await readFileAsDataUrl(file);
+      const originalDataUrl = await readFileAsDataUrl(file);
+      const dataUrl = await maybeDownscaleImageDataUrl(
+        originalDataUrl,
+        file.type,
+      );
       set({
         uploadedImageDataUrl: dataUrl,
         selectedFileName: file.name,
@@ -252,8 +300,10 @@ const useAppStore = create((set, get) => ({
       });
       lastAutoSubmittedInput = "";
       get().onButtonSubmit();
-    } catch {
-      set({ error: "Could not read the selected image." });
+    } catch (err) {
+      set({
+        error: parseErrorMessage(err, "Could not read the selected image."),
+      });
     }
   },
 
