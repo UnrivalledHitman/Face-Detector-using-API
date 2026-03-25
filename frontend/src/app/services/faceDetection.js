@@ -29,21 +29,103 @@ const getTinyFaceDetectorOptions = ({
 
 const clampPercent = (value) => Math.max(0, Math.min(100, value));
 
-const toPercentBoxes = (detections, width, height) =>
-  detections.map((detection) => {
-    const { x, y, width: boxWidth, height: boxHeight } = detection.box;
-    const top = (y / height) * 100;
-    const left = (x / width) * 100;
-    const bottom = ((height - (y + boxHeight)) / height) * 100;
-    const right = ((width - (x + boxWidth)) / width) * 100;
+const toCandidateBox = (detection, width, height, passWeight = 1) => {
+  const { x, y, width: boxWidth, height: boxHeight } = detection.box;
+  const top = (y / height) * 100;
+  const left = (x / width) * 100;
+  const bottom = ((height - (y + boxHeight)) / height) * 100;
+  const right = ((width - (x + boxWidth)) / width) * 100;
+  const rawScore =
+    typeof detection.score === "number" && Number.isFinite(detection.score)
+      ? detection.score
+      : 1;
 
-    return {
-      topRow: clampPercent(top),
-      leftCol: clampPercent(left),
-      bottomRow: clampPercent(bottom),
-      rightCol: clampPercent(right),
-    };
-  });
+  return {
+    topRow: clampPercent(top),
+    leftCol: clampPercent(left),
+    bottomRow: clampPercent(bottom),
+    rightCol: clampPercent(right),
+    score: rawScore * passWeight,
+  };
+};
+
+const toNormalizedCoords = (box) => {
+  const x1 = box.leftCol / 100;
+  const y1 = box.topRow / 100;
+  const x2 = 1 - box.rightCol / 100;
+  const y2 = 1 - box.bottomRow / 100;
+
+  return {
+    x1: Math.max(0, Math.min(1, x1)),
+    y1: Math.max(0, Math.min(1, y1)),
+    x2: Math.max(0, Math.min(1, x2)),
+    y2: Math.max(0, Math.min(1, y2)),
+  };
+};
+
+const isLikelyFaceBox = (box) => {
+  const { x1, y1, x2, y2 } = toNormalizedCoords(box);
+  const width = x2 - x1;
+  const height = y2 - y1;
+
+  if (width <= 0 || height <= 0) {
+    return false;
+  }
+
+  const area = width * height;
+  const aspectRatio = width / height;
+
+  return (
+    area >= 0.0005 && area <= 0.45 && aspectRatio >= 0.45 && aspectRatio <= 1.9
+  );
+};
+
+const calculateIoU = (left, right) => {
+  const a = toNormalizedCoords(left);
+  const b = toNormalizedCoords(right);
+
+  const interX1 = Math.max(a.x1, b.x1);
+  const interY1 = Math.max(a.y1, b.y1);
+  const interX2 = Math.min(a.x2, b.x2);
+  const interY2 = Math.min(a.y2, b.y2);
+
+  const interW = Math.max(0, interX2 - interX1);
+  const interH = Math.max(0, interY2 - interY1);
+  const interArea = interW * interH;
+
+  const leftArea = Math.max(0, a.x2 - a.x1) * Math.max(0, a.y2 - a.y1);
+  const rightArea = Math.max(0, b.x2 - b.x1) * Math.max(0, b.y2 - b.y1);
+  const union = leftArea + rightArea - interArea;
+
+  if (union <= 0) {
+    return 0;
+  }
+
+  return interArea / union;
+};
+
+const applyNms = (boxes, iouThreshold = 0.35) => {
+  const sorted = [...boxes].sort((a, b) => b.score - a.score);
+  const kept = [];
+
+  for (const candidate of sorted) {
+    const overlaps = kept.some(
+      (existing) => calculateIoU(existing, candidate) > iouThreshold,
+    );
+    if (!overlaps) {
+      kept.push(candidate);
+    }
+  }
+
+  return kept;
+};
+
+const dropScore = (box) => ({
+  topRow: box.topRow,
+  leftCol: box.leftCol,
+  bottomRow: box.bottomRow,
+  rightCol: box.rightCol,
+});
 
 const loadImage = (src) =>
   new Promise((resolve, reject) => {
@@ -70,13 +152,18 @@ const detectTinyFacesAsPercentBoxes = async ({
   width,
   height,
   options,
+  passWeight = 1,
+  minScore = 0,
 }) => {
   const detections = await faceapi.detectAllFaces(
     input,
     getTinyFaceDetectorOptions(options),
   );
 
-  return toPercentBoxes(detections, width, height);
+  return detections
+    .map((detection) => toCandidateBox(detection, width, height, passWeight))
+    .filter((box) => box.score >= minScore)
+    .filter(isLikelyFaceBox);
 };
 
 const createUpscaledCanvas = (image, maxLongestSide = 1600) => {
@@ -151,31 +238,39 @@ export const detectFacesInImage = async (imageSrc) => {
     width: image.naturalWidth,
     height: image.naturalHeight,
     options: { inputSize: 512, scoreThreshold: 0.5 },
+    passWeight: 1,
+    minScore: 0.45,
   });
-  if (primaryPassBoxes.length) {
-    return primaryPassBoxes;
-  }
 
   const lowThresholdBoxes = await detectTinyFacesAsPercentBoxes({
     input: image,
     width: image.naturalWidth,
     height: image.naturalHeight,
     options: { inputSize: 608, scoreThreshold: 0.35 },
+    passWeight: 0.92,
+    minScore: 0.35,
   });
-  if (lowThresholdBoxes.length) {
-    return lowThresholdBoxes;
+
+  let mergedBoxes = applyNms([...primaryPassBoxes, ...lowThresholdBoxes]);
+  if (mergedBoxes.length >= 2) {
+    return mergedBoxes.map(dropScore);
   }
 
   // Upscaled retry improves recall for small/far faces in wide scene photos.
   const upscaledCanvas = createUpscaledCanvas(image);
   if (!upscaledCanvas) {
-    return [];
+    return mergedBoxes.map(dropScore);
   }
 
-  return detectTinyFacesAsPercentBoxes({
+  const upscaledBoxes = await detectTinyFacesAsPercentBoxes({
     input: upscaledCanvas,
     width: upscaledCanvas.width,
     height: upscaledCanvas.height,
     options: { inputSize: 608, scoreThreshold: 0.3 },
+    passWeight: 0.85,
+    minScore: 0.3,
   });
+
+  mergedBoxes = applyNms([...mergedBoxes, ...upscaledBoxes]);
+  return mergedBoxes.map(dropScore);
 };
